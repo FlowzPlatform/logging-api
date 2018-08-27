@@ -1,0 +1,17 @@
+{
+  "name": "logging",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "micro"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apla/clickhouse": "^1.5.3",
+    "micro": "^9.3.3",
+    "microrouter": "^3.1.3"
+  }
+}
