@@ -1,2 +1,2 @@
-# logger-api
+# logging-api
 api for logging
