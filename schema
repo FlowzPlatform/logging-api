@@ -1,0 +1,14 @@
+{
+		"schema_name": "alpr_group",
+		"schema": {
+		      "camera_id" : "string",
+          "best_plate_number" : "string",
+          "best_confidence" : "string",
+          "travel_direction" : "string",
+          "processing_time_ms" : "string",
+          "vehicle_make" : "string",
+          "vehicle_color" : "string",
+          "vehicle_body_type" : "string",
+          "best_region" : "string"
+        }
+}
