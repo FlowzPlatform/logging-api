@@ -4,13 +4,10 @@ const ClickHouse = require("@apla/clickhouse");
 const url = require('url');
 const _= require('lodash');
 const cors = require('micro-cors')();
-const fn = require('./functions');
-const fnats = require('./fnnats');
 
 console.log(ClickHouse);
 
 console.log('=============================');
-console.log(fn);
 
 
 const hello = async(req, res) => {
@@ -21,33 +18,63 @@ const hello = async(req, res) => {
 }
 
 
-const logData = async(req, res) => {
-    // console.log('enter in logData')
-    await create(req, res, 1);
-    // console.log('>>>', result)
-    // console.log('created in logData')
-    // Promise.resolve(temp).then((value) => {
-    //   console.log('after create call')
-    //   insert(req, res);
-    // }).catch(err => {
-    //   console.log('?>>>>>', err)
-    // })
+const create_with_insert = async(req, res) => {
 
-    // send(res, 200, result)
+    //console.log('into create with insert');
+    let body = await json(req);
+    var TableName = body.schema_name;
+    var SchemaDetail = body.schema;
+    var data = body.data;
+    if(TableName == null || SchemaDetail == null || data == null){
+      return "Please provide schema_name, schema and data.";
+    };
+
+    let result_string =  await create(req, res, 1);
+
+    // let string = await waitfunction(req, res, 1);
+    // console.log("res:", string);
+
+    send(res, 200, "create with insert completed"); //"THIS ALWAYS RETURNS SAME RESPONSE WHETHER TABLE CREATED OR NOT , INSERTED OR NOT"
+     // send(res, 200,result_string);
 }
+
+const waitfunction = async(req, res, isInsert=1) => {
+  console.log('into wait function');
+  return new Promise(async(resolve, reject) => {
+    await create(req, res, 1);
+    resolve(1);
+  });
+}
+
 
 const create = async(req, res, isInsert=0) => {
 
-      console.log('isInsert :: ', isInsert);
+      console.log('Create With Insert :: ', isInsert);
 
       const ch = new ClickHouse({ host: 'localhost', port: 8123});
 
       let body = await json(req)
 
       var TableName = body.schema_name;
-      console.log('Create tablename ', TableName);
+      console.log('Create tablename :', TableName);
 
-       const SchemaDetail = body.schema;
+      let show_result;
+      try{
+        show_result = await show_table(TableName, res);
+        console.log("Table Exists result :", show_result);
+        console.log("Table Exists :", show_result.length);
+      }
+      catch(err){
+        console.log("show table error", err);
+      }
+
+      if(show_result.length > 0){
+        //send(res, 200, "Table already exists...!!");
+        return("Table already exists...!!");
+        //exit();
+      }
+
+      const SchemaDetail = body.schema;
 
       let Fields = Object.keys(SchemaDetail);
       let Datatypes = Object.values(SchemaDetail);
@@ -65,9 +92,8 @@ const create = async(req, res, isInsert=0) => {
       Fields.forEach(function(element){
 
         // console.log(datatypes[SchemaDetail[element]]);
-        string1 = string1 + ", `" + element +  "` " + datatypes[SchemaDetail[element]] ;
         //string1 = string1 + ", `" + element +  "` " + SchemaDetail[element] ;
-        //console.log(element, SchemaDetail[element]);
+        string1 = string1 + ", `" + element +  "` " + datatypes[SchemaDetail[element]] ;
       });
 
       createQuery = createQuery + " ( " + string1 + " ) " + "ENGINE = MergeTree(logDate, (logDate), 8192)" ;
@@ -77,33 +103,30 @@ const create = async(req, res, isInsert=0) => {
       // let CreateQuery = "CREATE TABLE IF NOT EXISTS `logtable`  ( `logDate` Date, `logDateTime` DateTime, `ip` String, `location` String, `pagename` String, `username` String, `referrer` String ) ENGINE = MergeTree(logDate, (logDate), 8192)";
 
       //assert (!err, err);
-      let response = ch.query(createQuery, { queryOptions: { database: 'default' } }, function(err, result) {
+      let result_string = "";
+      let response = ch.query(createQuery, { queryOptions: { database: 'default' } },await  function(err, result) {
           if (err) {
-              console.log("Create err :: ", err);
+              console.log("Create error :: ", err);
           } else {
-              console.log("Create res :: ", result);
-              console.log("============== ", isInsert);
+              console.log("Create result :: ", result);
+              result_string = result_string + " Create Completed ";
+              //console.log("isInsert ::", isInsert);
               if(isInsert == 1)
               {
-                console.log('insert data..');
-                  let response = insert(req, res);
+                console.log('create complete now insert data..');
+                let response = insert(req, res);
+                result_string = result_string + " Insert Completed ";
+                //return result_string;
               }
-
-            //response = response + "Create Completed";
-            //console.log(response);
-            return "response";
           }
-          //done ();
       });
-      // console.log('create completed')
-      // Promise.resolve(queryDone).then((value) => {
-      //   console.log('Table Created');
-      // }).catch(err => {
-      //   console.log('Error in promise', err);
-      // })
 
-      //console.log(">>>>>", response);
-      send(res, 200, "Create completed...!!");
+      if(isInsert == 0 ){
+        send(res, 200, "Create completed...!!");
+      }
+      else{
+        return result_string;
+      }
       // END : To create Table logtable if not exists
 }
 
@@ -116,7 +139,7 @@ const insert = async(req, res) => {
 
     var TableName = body.schema_name;
 
-    console.log(TableName);
+    console.log("Insert Tablename :", TableName);
     const data = body.data;
 
   let colnames = Object.keys(data);
@@ -147,7 +170,7 @@ const insert = async(req, res) => {
 
 
 
-  ch.query(InsertQuery, { queryOptions: { database: 'default' } }, function(err, result) {
+  let response = ch.query(InsertQuery, { queryOptions: { database: 'default' } },await function(err, result) {
       if (err) {
           console.log("Insert err :: ", err);
       } else {
@@ -155,6 +178,7 @@ const insert = async(req, res) => {
           // return { insert: true }
       }
   });
+
   //console.log('insert result', temp)
   // send(res, 200, result)
   return "Insert Completed";
@@ -225,11 +249,9 @@ const select = cors(async(req, res) => {
 })
 
 const fetchData2 = async(stream) => {
-  console.log('2222222222')
   return new Promise(async(resolve, reject) => {
     await stream.on ('end', function () {
        // all rows are collected, let's verify count
-      console.log('ccccccccccccccccc');
       resolve(1)
     });
   });
@@ -275,7 +297,7 @@ const select_distinct = cors(async(req, res) => {
         });
 
 
-        await fetchData3(stream);
+        await fetchData2(stream);
         console.log('getdata-distinct complete');
 
 
@@ -283,14 +305,6 @@ const select_distinct = cors(async(req, res) => {
       send(res, 200, rows);
 })
 
-const fetchData3 = async(stream) => {
-  return new Promise(async(resolve, reject) => {
-    await stream.on ('end', function () {
-       // all rows are collected, let's verify count
-      resolve(1)
-    });
-  });
-}
 
 const inserttest = async(req, res) => {
 
@@ -487,18 +501,52 @@ const select_table = cors(async(req, res) => {
       send(res, 200, rows);
 })
 
+const show_table = cors(async(TableName, res) => {
+
+    let ch = new ClickHouse({ host: 'localhost' });
+    console.log("Tablename to check Exists or not :", TableName);
+
+    selectQuery = "SHOW tables LIKE '" + TableName + "' FORMAT JSON" ;
+
+    console.log(selectQuery);
+    var stream = ch.query(selectQuery);
+
+
+      // or collect records yourself
+      let rows = [];
+
+      /*  stream.on ('metadata', function (columns) {
+         console.log(columns);
+       }); */
+
+        stream.on ('data', function (row) {
+          rows.push(row);
+          //console.log('inside loop' ,rows);
+        });
+
+        stream.on ('error', function (err) {
+          //TODO: handler error
+          console.log('select error :', err);
+        });
+
+        await fetchData2(stream);
+
+      // send(res, 200, " hi getdata...!!")
+      // send(res, 200, rows);
+      return rows;
+})
+
 
 
 module.exports = router(
     //post('/hellopost', hellopost),
     get('/hello/:who', hello),
-    post('/logdata', logData),
+    post('/create-with-insert', create_with_insert),
     get('/getdata', select),
     get('/fetchdata/:tbl', select_table),
     get('/getdata-distinct', select_distinct),
     post('/create', create),
     post('/insert', insert),
     post('/insert-test/', inserttest),
-    post('/publish-nats', fnats.publishNats)
     //get('/*', notfound)
 )
