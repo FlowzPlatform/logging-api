@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Page Title</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://unpkg.com/vue@2.5.16/dist/vue.js"></script>
+  <!-- import CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <!-- import JavaScript -->
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
+  <script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+  <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <style>
+     .el-dropdown-link {
+    cursor: pointer;
+    color: #409EFF;
+  }
+  .el-icon-arrow-down {
+    font-size: 12px;
+  }
+  .card{
+    padding: 10px;
+    margin: 5px 0;
+    box-shadow: 2px 2px 15px #DADADA;
+  }
+  </style>
+</head>
+<body>
+  <div id="app" class="container" style="min-width:1600px !important;">
+    <template>
+      <h1 style="background-color: #eee">Open Alpr</h1>
+      <el-row :gutter="24">
+        <el-col :span="8">
+          <div class="card">
+            <div class="grid-content bg-purple">
+              <h4>
+                <b>Search Parameters</b>
+              </h4>
+              <div v-for="item in dropdownArrays" style="margin-top: 20px ">
+                <h6 style=" font-weight: bolder">{{item.name}}</h6>
+                <el-select v-model="dropdownArraysBind[item.name]" placeholder="Select" style="width: 100%;">
+                  <el-option v-for="i in item.value" :key="item.value" :label="i" :value="i">
+                  </el-option>
+                </el-select>
+              </div>
+              <div v-for="item in InputArrays" style="margin-top: 20px ">
+                <span style=" font-weight: bolder">{{item}}</span>
+                <el-input placeholder="Please input" v-model="InputArraysBind[item]"></el-input>
+              </div>
+            </div>
+            <el-button style="margin-top: 20px " type="primary" @click="methodCall">Search</el-button>
+          </div>
+        </el-col>
+        <el-col :span="16">
+          <div class="card">
+            <div class="grid-content bg-purple">
+              <el-table :data="tableData" style="width: 100%">
+                <el-table-column prop="logDateTime" label="Time" width="150">
+                </el-table-column>
+                <el-table-column prop="camera_id" label="Camera" width="95">
+                </el-table-column>
+                <!-- <el-table-column prop="best_plate_number" label="Plate Number" width="115" :formatter="(row, column) => formatter2(row, column, 'best_plate_number')">
+                </el-table-column> -->
+                <el-table-column prop="best_plate_number" label="Plate Number" width="115">
+                  <template scope="scope">
+                    <div>
+                         <a href="#" onmouseover="formatter2(row)"
+                         onmouseout="document.getElementById('place-holder-1').src='https://upload.wikimedia.org/wikipedia/commons/5/59/Empty.png';">
+                         {{scope.row.best_plate_number}}
+                         <img src="https://upload.wikimedia.org/wikipedia/commons/5/59/Empty.png" id="place-holder-1" style="zindex: 100; position: absolute;" height="255" width="255" />
+                         </a>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="vehicle_make" label="Make" width="80">
+                </el-table-column>
+                <el-table-column prop="vehicle_body_type" label="BodyType">
+                </el-table-column>
+                <el-table-column prop="vehicle_color" label="Color">
+                </el-table-column>
+                <el-table-column prop="best_region" label="Region">
+                </el-table-column>
+                <el-table-column prop="best_confidence" label="Confidence">
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+
+        </el-col>
+      </el-row>
+    </template>
+  </div>
+</body>
+<script>
+  var app = new Vue({
+    el: '#app',
+    data() {
+      return {
+        tableData: [],
+        dropdownArrays: {
+          "d1": {
+            "name": "Vehicle_Make",
+            "value": []
+          },
+          "d2": {
+            "name": "Vehicle_BodyType",
+            "value": [
+              "suv-standard",
+              "van-mini",
+              "sedan-standard",
+              "van-full"
+            ]
+          },
+          "d3": {
+            "name": "Vehicle_Color",
+            "value": [
+              "white",
+              "silver-gray",
+              "green"
+            ]
+          },
+          "d4": {
+            "name": "Region",
+            "value": [
+              "us-co",
+              "us-fl",
+              "us-ca",
+              "us-ir"
+            ]
+          }
+        },
+        dropdownArraysBind: {
+          "Vehicle_Make" : '',
+          "Vehicle_BodyType" : '',
+          "Vehicle_Color" : '',
+          "Region" : ''
+        },
+        InputArrays : ["PlateNumber"],
+        InputArraysBind: {
+          "PlateNumber": ''
+        }
+      };
+    },
+    methods: {
+      methodCall () {
+        Vehicle_Make_Value = this.dropdownArraysBind.Vehicle_Make;
+        Vehicle_BodyType_Value = this.dropdownArraysBind.Vehicle_BodyType;
+        Vehicle_Color_Value = this.dropdownArraysBind.Vehicle_Color;
+        Region_Value = this.dropdownArraysBind.Region;
+        PlateNumber_Value = this.InputArraysBind.PlateNumber;
+
+        console.log(Vehicle_Make_Value, Vehicle_BodyType_Value, Vehicle_Color_Value, PlateNumber_Value, Region_Value);
+        let Query ="";
+
+       if(Vehicle_Make_Value != '' ){
+         Query = Query + "vehicle_make='" + Vehicle_Make_Value + "'&";
+         // console.log("11111111",Query);
+       };
+       if(Vehicle_BodyType_Value != ''){
+         Query = Query + "vehicle_body_type='" + Vehicle_BodyType_Value + "'&";
+       };
+       if(Vehicle_Color_Value != ''){
+         Query = Query + "vehicle_color='" + Vehicle_Color_Value + "'&";
+       };
+       if(PlateNumber_Value != ''){
+         Query = Query + "best_plate_number='" + PlateNumber_Value + "'&";
+       };
+       if(Region_Value != ''){
+         Query = Query + "best_region='" + Region_Value + "'&";
+       };
+
+      Query = "?" + Query;
+      // console.log(Query);
+
+      var pos = Query.lastIndexOf("&")
+      Query = Query.slice(0, pos);
+      console.log(Query);
+
+
+        //alert(1)
+        axios.get("http://172.16.61.20:3000/getdata" + Query)
+        .then((response)=>{
+          this.tableData = response.data
+          console.log(response.data)
+        })
+        .catch((error)=>{
+          console.log(error)
+        })
+      }
+    }
+  })
+</script>
+<script>
+formatter2(row) {
+ // The problem is here. can't get row correctly~~~
+ console.log(row);
+ let str = "document.getElementById('place-holder-1').src='http://172.16.61.20:32777/img/"+ row.best_uuid + ".jpg'";
+ return str;
+ console.log(str);
+}
+$('a[data-toggle="tooltip"]').tooltip({
+    animated: 'fade',
+    placement: 'bottom',
+    html: true
+});
+</script>
+<script>
+
+$('#popover').popover({placement: 'right', html: true});
+</script>
+
+</html>

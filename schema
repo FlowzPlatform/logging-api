@@ -1,14 +1,61 @@
-{
-		"schema_name": "alpr_group",
-		"schema": {
-		      "camera_id" : "string",
-          "best_plate_number" : "string",
-          "best_confidence" : "string",
-          "travel_direction" : "string",
-          "processing_time_ms" : "string",
-          "vehicle_make" : "string",
-          "vehicle_color" : "string",
-          "vehicle_body_type" : "string",
-          "best_region" : "string"
-        }
-}
+CREATE TABLE `alpr_group` (
+`logDate` Date,
+`logDateTime` DateTime,
+`logType` String,
+`logLevel` UInt8,
+`camera_id` String,
+`company_id` String,
+`frame_start` UInt16,
+`frame_end` UInt16,
+`best_uuid` String,
+`best_plate_number` String,
+`best_confidence` Float64,
+`best_region` String,
+`travel_direction` Float64,
+`vehicle_make` String,
+`vehicle_make_model` String,
+`vehicle_color` String,
+`vehicle_body_type` String,
+`vehicle_year` String,
+`is_parked` UInt8,
+`x1` UInt16,
+`y1` UInt16,
+`x2` UInt16,
+`y2` UInt16,
+`x3` UInt16,
+`y3` UInt16,
+`x4` UInt16,
+`y4` UInt16,
+`vehicle_x` UInt16,
+`vehicle_y` UInt16,
+`vehicle_width` UInt16,
+`vehicle_height` UInt16
+) ENGINE = Log
+
+
+CREATE TABLE `stolen_plate` (
+`plate` String
+) ENGINE = Log
+
+CREATE TABLE `sites` (
+`camera_id` String,
+`location` String
+) ENGINE = Log
+
+CREATE TABLE `notification_history` (
+`found_date` DateTime,
+`plate_number` String,
+`camera_id` String,
+`company_id` String,
+`best_uuid` String,
+`best_region` String,
+`travel_direction` Float64,
+`vehicle_make` String,
+`vehicle_make_model` String,
+`vehicle_color` String,
+`vehicle_body_type` String,
+`vehicle_year` String,
+`is_parked` UInt8
+) ENGINE = Log
+
+

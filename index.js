@@ -1,7 +1,17 @@
 const { json, send, createError, sendError } = require('micro');
 const { router, get, post } = require('microrouter')
 const ClickHouse = require("@apla/clickhouse");
+const url = require('url');
+const _= require('lodash');
+const cors = require('micro-cors')();
+const fn = require('./functions');
+const fnats = require('./fnnats');
+
 console.log(ClickHouse);
+
+console.log('=============================');
+console.log(fn);
+
 
 const hello = async(req, res) => {
 
@@ -150,38 +160,136 @@ const insert = async(req, res) => {
   return "Insert Completed";
 }
 
-const select = async(req, res) => {
+const select = cors(async(req, res) => {
+
+    var url_parts = url.parse(req.url, true);
+    // console.log(url_parts);
+
+    var query = url_parts.query;
+    //console.log(query);
+
+    var keys = Object.keys(query);
+    var values = Object.values(query);
+    //console.log(keys);
+    //console.log(values);
 
     let ch = new ClickHouse({ host: 'localhost' });
 
-    var stream = ch.query ("SELECT * from logtable3 FORMAT JSON");
+    selectQuery = "SELECT * from alpr_group ";
 
-    // or collect records yourself
+    var string5 = " where ";
 
-  stream.on ('metadata', function (columns) {
-      console.log(columns);
+    if(Object.keys(query).length > 0){
+
+      keys.forEach(function(element){
+        string5 = string5 + element + " = " + query[element] + " AND ";
+      });
+
+      var pos = string5.lastIndexOf("AND")
+      string5 = string5.slice(0, pos);
+      selectQuery = selectQuery + string5;
+      //console.log(string5);
+    }
+
+    selectQuery = selectQuery + " FORMAT JSON ";
+
+    console.log(selectQuery);
+    var stream = ch.query(selectQuery);
+
+
+      // or collect records yourself
+      let rows = [];
+
+      /*  stream.on ('metadata', function (columns) {
+         console.log(columns);
+       }); */
+
+        stream.on ('data', function (row) {
+          rows.push(row);
+          //console.log('inside loop' ,rows);
+        });
+
+        stream.on ('error', function (err) {
+          //TODO: handler error
+          console.log('select error :', err);
+        });
+
+
+        console.log('121212121212');
+        await fetchData2(stream);
+        console.log('aaaaaaaaaaaaaaaaaaaaaaa');
+
+
+      // send(res, 200, " hi getdata...!!")
+      send(res, 200, rows);
+})
+
+const fetchData2 = async(stream) => {
+  console.log('2222222222')
+  return new Promise(async(resolve, reject) => {
+    await stream.on ('end', function () {
+       // all rows are collected, let's verify count
+      console.log('ccccccccccccccccc');
+      resolve(1)
     });
+  });
+}
 
-  stream.on ('data', function (row) {
-      //rows.push (row);
-      console.log(row);
+
+const select_distinct = cors(async(req, res) => {
+
+    //console.log("into distinct");
+    var url_parts = url.parse(req.url, true);
+    // console.log(url_parts);
+
+    var query = url_parts.query;
+    //console.log(query);
+
+    var value = query.column;
+    //console.log(keys);
+    console.log(value);
+
+    let ch = new ClickHouse({ host: 'localhost' });
+
+    selectQuery = "SELECT " + value + " from alpr_group group by " + value +" FORMAT JSON";
+
+    console.log(selectQuery);
+    var stream = ch.query(selectQuery);
+
+
+      // or collect records yourself
+      let rows = [];
+
+      /*  stream.on ('metadata', function (columns) {
+         console.log(columns);
+       }); */
+
+        stream.on ('data', function (row) {
+          rows.push(row);
+          //console.log('inside loop' ,rows);
+        });
+
+        stream.on ('error', function (err) {
+          //TODO: handler error
+          console.log('select error :', err);
+        });
+
+
+        await fetchData3(stream);
+        console.log('getdata-distinct complete');
+
+
+      // send(res, 200, " hi getdata...!!")
+      send(res, 200, rows);
+})
+
+const fetchData3 = async(stream) => {
+  return new Promise(async(resolve, reject) => {
+    await stream.on ('end', function () {
+       // all rows are collected, let's verify count
+      resolve(1)
     });
-
-    /*stream.on ('error', function (err) {
-      // TODO: handler error
-    }); */
-
-    stream.on ('end', function () {
-      // all rows are collected, let's verify count
-      //assert (rows.length === stream.supplemental.rows);
-      // how many rows in result are set without windowing:
-      //console.log ('rows in result set', stream.supplemental.rows_before_limit_at_least);
-    });
-
-    //console.log(rows);
-    //console.log(stream);
-
-    send(res, 200, "hi select..")
+  });
 }
 
 const inserttest = async(req, res) => {
@@ -197,28 +305,58 @@ const inserttest = async(req, res) => {
       console.log("Heartbeat dropped.");
       return "Heartbeat dropped.";
     }
+    else{};
     //console.log(TableName);
 
-    let date = new Date().toISOString().split('T')[0];
-    //console.log(date);
-    let datetime =  new Date().toISOString().split('T')[0] + " " + new Date().toLocaleTimeString() ;
-    //console.log(datetime);
-
-  //let InsertQuery = "INSERT INTO logtable VALUES ( '" + new Date().toISOString().split('T')[0] + "','" + datetime + "','"+ ip + "','"+ location + "','" + pagename + "','" + username + "','" + referrer + "')";
-
-  let InsertQuery = "INSERT INTO " + TableName;
-
-  let string3 =   " `logDate`, `logDateTime`";
-
   var camera_id = body.camera_id;
+  //console.log(typeof(camera_id));
+  var company_id = body.company_id;
+  var frame_start = body.frame_start;
+  var frame_end = body.frame_end;
+  var best_uuid = body.best_uuid;
   var best_plate_number = body.best_plate_number;
   var best_confidence = body.best_confidence;
-  var travel_direction = body.travel_direction;
-  var processing_time_ms = body.best_plate.processing_time_ms;
   var best_region = body.best_region;
+  //console.log(typeof(best_confidence));
+  var travel_direction = body.travel_direction;
+
+
   var vehicle_make_temp = body.vehicle.make;
+  var vehicle_make_model_temp = body.vehicle.make_model;
   var vehicle_color_temp = body.vehicle.color;
   var vehicle_body_type_temp = body.vehicle.body_type;
+  var vehicle_year_temp = body.vehicle.year;
+
+
+  var best_plate = body.best_plate;
+  var coordinates = best_plate.coordinates;
+
+  var x1 = coordinates[0].x;
+  var y1 = coordinates[0].y;
+
+  var x2 = coordinates[1].x;
+  var y2 = coordinates[1].y;
+
+  var x3 = coordinates[2].x;
+  var y3 = coordinates[2].y;
+
+  var x4 = coordinates[3].x;
+  var y4 = coordinates[3].y;
+
+  let is_parked;
+  if (body.is_parked == false){
+    is_parked = 0;
+  }
+  else{
+    is_parked = 1;
+  }
+
+  //console.log(body.is_parked, is_parked);
+
+  var vehicle_x = best_plate.vehicle_region.x;
+  var vehicle_y = best_plate.vehicle_region.y;
+  var vehicle_width = best_plate.vehicle_region.width;
+  var vehicle_height = best_plate.vehicle_region.height;
 
   //console.log(camera_id, best_plate_number, best_confidence, travel_direction, processing_time_ms, best_region);
   //console.log('make : ',vehicle_make_temp);
@@ -226,39 +364,72 @@ const inserttest = async(req, res) => {
   //console.log('body_type : ',vehicle_body_type_temp);
 
   let conf_make = 0;
-  let vehicle_make;
+  let vehicle_make = "-";
   vehicle_make_temp.forEach(function(element){
     if( element.confidence >= conf_make){
       vehicle_make = element.name;
       conf_make = element.confidence;
     }
   });
-//  console.log(vehicle_make);
+  //  console.log(vehicle_make);
+
+  let conf_make_model = 0;
+  let vehicle_make_model = "-";
+  vehicle_make_model_temp.forEach(function(element){
+    if( element.confidence >= conf_make_model){
+      vehicle_make_model = element.name;
+      conf_make_model = element.confidence;
+    }
+  });
+  //console.log(vehicle_make_model);
 
   let conf_color = 0;
-  let vehicle_color;
+  let vehicle_color = "-";
   vehicle_color_temp.forEach(function(element){
     if( element.confidence >= conf_color){
       vehicle_color = element.name;
       conf_color = element.confidence;
     }
   });
-//  console.log(vehicle_color);
+  //  console.log(vehicle_color);
 
   let conf_body = 0;
-  let vehicle_body;
+  let vehicle_body = "-";
   vehicle_body_type_temp.forEach(function(element){
     if( element.confidence >= conf_body){
       vehicle_body = element.name;
       conf_body = element.confidence;
     }
   });
+
+  let conf_year = 0;
+  let vehicle_year = "-";
+  vehicle_year_temp.forEach(function(element){
+    if( element.confidence >= conf_year){
+      vehicle_year = element.name;
+      conf_year = element.confidence;
+    }
+  });
+  //console.log(vehicle_year);
   //console.log(vehicle_make, vehicle_color, vehicle_body);
+
+
+  let date = new Date().toISOString().split('T')[0];
+  //console.log(date);
+  let datetime =  new Date().toISOString().split('T')[0] + " " + new Date().toLocaleTimeString() ;
+  //console.log(datetime);
+  let logType = "DEBUG";
+  let logLevel = 1;
+  //let InsertQuery = "INSERT INTO logtable VALUES ( '" + new Date().toISOString().split('T')[0] + "','" + datetime + "','"+ ip + "','"+ location + "','" + pagename + "','" + username + "','" + referrer + "')";
+
+  let InsertQuery = "INSERT INTO " + TableName;
+
+  let string3 =   " `logDate`, `logDateTime`";
 
   let string4 =   "'" + date + "', '" + datetime + "'";
 
-    string4 = string4 + ", '" + camera_id +  "' "+ ", '" + best_plate_number +  "' "+ ", '" + parseFloat(best_confidence) +  "' "+ ", '" + parseFloat(travel_direction) +  "' "+ ", '" + parseFloat(processing_time_ms) +  "' "+ ", '" + vehicle_make +  "' "+ ", '" + vehicle_color +  "' "+ ", '" + vehicle_body +  "', '" + best_region +  "' ";
-
+  //string4 = string4 + ", " + camera_id +  " "+ ", '" + best_plate_number +  "' "+ ", " + best_confidence +  " "+ ", " + travel_direction +  " "+ ", " + processing_time_ms +  " "+ ", '" + vehicle_make +  "' "+ ", '" + vehicle_color +  "' "+ ", '" + vehicle_body +  "', '" + best_region +  "' ";
+  string4 = string4 + " , '" + logType+ "' , " + logLevel + ", '" + camera_id + "' , '"+ company_id + "' , " + frame_start + " , " + frame_end + " , '" + best_uuid + "' , '" + best_plate_number +  "' , " + best_confidence + ", '" + best_region + "' , " + travel_direction + " , '" + vehicle_make +  "' , '" + vehicle_make_model + "' , '" + vehicle_color +  "' , '" + vehicle_body +  "' , '" + vehicle_year  +  "' , " + is_parked + "," + x1 + "," + y1+ "," + x2+ "," + y2+ "," + x3+ "," + y3+ "," + x4+ "," + y4 + "," + vehicle_x + "," + vehicle_y + "," + vehicle_width + "," + vehicle_height + " ";
 
   InsertQuery = InsertQuery + " VALUES" + " ( " + string4 + " ) " ;
   console.log(InsertQuery);
@@ -279,13 +450,55 @@ const inserttest = async(req, res) => {
   return "Insert Completed";
 }
 
+const select_table = cors(async(req, res) => {
+
+    //console.log(req.params);
+
+    var tablename = req.params.tbl;
+
+    let ch = new ClickHouse({ host: 'localhost' });
+
+    selectQuery = "SELECT * from " + tablename + " FORMAT JSON" ;
+
+    console.log(selectQuery);
+    var stream = ch.query(selectQuery);
+
+
+      // or collect records yourself
+      let rows = [];
+
+      /*  stream.on ('metadata', function (columns) {
+         console.log(columns);
+       }); */
+
+        stream.on ('data', function (row) {
+          rows.push(row);
+          //console.log('inside loop' ,rows);
+        });
+
+        stream.on ('error', function (err) {
+          //TODO: handler error
+          console.log('select error :', err);
+        });
+
+        await fetchData2(stream);
+
+      // send(res, 200, " hi getdata...!!")
+      send(res, 200, rows);
+})
+
+
+
 module.exports = router(
     //post('/hellopost', hellopost),
     get('/hello/:who', hello),
     post('/logdata', logData),
-    post('/select', select),
+    get('/getdata', select),
+    get('/fetchdata/:tbl', select_table),
+    get('/getdata-distinct', select_distinct),
     post('/create', create),
     post('/insert', insert),
-    post('/insert-test/', inserttest)
+    post('/insert-test/', inserttest),
+    post('/publish-nats', fnats.publishNats)
     //get('/*', notfound)
 )
