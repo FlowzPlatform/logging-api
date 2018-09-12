@@ -38,8 +38,8 @@ CREATE TABLE `stolen_plate` (
 ) ENGINE = Log
 
 CREATE TABLE `sites` (
-`camera_id` String,
-`location` String
+`camera_id` string,
+`location` string
 ) ENGINE = Log
 
 CREATE TABLE `notification_history` (
@@ -57,5 +57,3 @@ CREATE TABLE `notification_history` (
 `vehicle_year` String,
 `is_parked` UInt8
 ) ENGINE = Log
-
-
