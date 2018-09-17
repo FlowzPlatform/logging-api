@@ -9,6 +9,10 @@ const cors = require('micro-cors')();
 console.log(ClickHouse);
 console.log('=============================')
 
+const hello = async (req, res) => {
+  send(res,200,"Hello User...!!")
+};
+
 const create_with_insert = async(req, res) => {
 
     //console.log('into create with insert');
@@ -75,7 +79,7 @@ const create = async(req, res, isInsert=0) => {
 
 
       let createQuery = "CREATE TABLE IF NOT EXISTS `" + TableName + "`";
-      let string1 =   " `logDate` Date, `logDateTime` DateTime";
+      let string1 =   " `logDateTime` DateTime";
 
       Fields.forEach(function(element){
 
@@ -84,7 +88,7 @@ const create = async(req, res, isInsert=0) => {
         string1 = string1 + ", `" + element +  "` " + datatypes[SchemaDetail[element]] ;
       });
 
-      createQuery = createQuery + " ( " + string1 + " ) " + "ENGINE = MergeTree(logDate, (logDate), 8192)" ;
+      createQuery = createQuery + " ( " + string1 + " ) " + "ENGINE = Log " ;
       // console.log(createQuery);
 
       // START : To create Table logtable if not exists
@@ -128,7 +132,7 @@ const insert = async(req, res) => {
   let colnames = Object.keys(data);
   let colvalues = Object.values(data);
 
-  let date = new Date().toISOString().split('T')[0];
+  //let date = new Date().toISOString().split('T')[0];
   //console.log(date);
   let datetime =  new Date().toISOString().split('T')[0] + " " + new Date().toLocaleTimeString() ;
   //console.log(datetime);
@@ -137,12 +141,12 @@ const insert = async(req, res) => {
 
   let InsertQuery = "INSERT INTO " + TableName;
 
-  let string3 =   " `logDate`, `logDateTime`";
+  let string3 =   " `logDateTime`";
   colnames.forEach(function(element){
     string3 = string3 + ", `" + element +  "` ";
   });
 
-  let string4 =   "'" + date + "', '" + datetime + "'";
+  let string4 =   "'" + datetime + "'";
   colvalues.forEach(function(element){
     //console.log(typeof(element));
     if(typeof(element) == "string"){
@@ -314,7 +318,7 @@ const show_table = cors(async(TableName, res) => {
 });
 
 module.exports = router(
-  
+    get('/', hello),
     post('/create', create),
     post('/insert', insert),
     post('/create-with-insert', create_with_insert),
